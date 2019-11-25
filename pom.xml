@@ -13,6 +13,8 @@
 		<url>http://workday.com</url>
 	</organization>
 	<properties>
+		<force.version>37.0.3</force.version>
+		<force.partner.version>37.0.3</force.partner.version>
 		<java.compile.version>1.8</java.compile.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -38,6 +40,16 @@
 		<tag>HEAD</tag>
 	</scm>
 	<dependencies>
+			<dependency>
+			<groupId>com.force.api</groupId>
+			<artifactId>force-wsc</artifactId>
+			<version>${force.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.force.api</groupId>
+			<artifactId>force-partner-api</artifactId>
+			<version>${force.partner.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-compress</artifactId>

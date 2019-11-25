@@ -503,12 +503,6 @@ public class DataAPIConsumer {
 
 		logger.println();
 
-		if(!apiVersion.equalsIgnoreCase(Constants.API_VERSION_1))
-		{
-			//createDatasetRequestType.schema.clearNumericParseFormat();
-		}
-	
-		
 		ObjectMapper mapper = new ObjectMapper();
 		mapper.setSerializationInclusion(Include.NON_NULL);
 
@@ -562,11 +556,6 @@ public class DataAPIConsumer {
 			ClientProtocolException, IOException, DatasetLoaderException {
 
 		logger.println();
-
-		if(!apiVersion.equalsIgnoreCase(Constants.API_VERSION_1))
-		{
-			//createDatasetRequestType.schema.clearNumericParseFormat();
-		}
 	
 		
 		ObjectMapper mapper = new ObjectMapper();

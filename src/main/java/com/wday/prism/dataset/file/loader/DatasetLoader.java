@@ -110,6 +110,7 @@ public class DatasetLoader {
 //		File inputFile = null;
 		File schemaFile = null;
 		boolean status = true;
+		String statusMessage = null;
 		long uploadTime = 0L;
 
 		ThreadContext tx = ThreadContext.get();
@@ -422,6 +423,7 @@ public class DatasetLoader {
 			uploadTime = endTime - startTime;
 
 			status = DataAPIConsumer.completeBucket(tenantURL, apiVersion, tenantName, accessToken, hdrId, logger);
+			statusMessage = null;
 			startTime = System.currentTimeMillis();
 			while (status) {
 				GetBucketResponseType serverStatus = DataAPIConsumer.getBucket(tenantURL, apiVersion, tenantName,
@@ -430,6 +432,10 @@ public class DatasetLoader {
 					session.setParam(Constants.serverStatusParam, serverStatus.getBucketState().toUpperCase());
 					// Bucket state can be: New, Processing, Loading, Success, Failed
 					if (serverStatus.getBucketState().equalsIgnoreCase("Success")) {
+						statusMessage = serverStatus.getErrorMessage();
+						break;
+					} else if (serverStatus.getBucketState().equalsIgnoreCase("Warning")) {
+						statusMessage = serverStatus.getErrorMessage();
 						break;
 					} else if (serverStatus.getBucketState().equalsIgnoreCase("Processing")) {
 						if (System.currentTimeMillis() - startTime > maxWaitTime) {
@@ -477,6 +483,8 @@ public class DatasetLoader {
 						+ "} Processing Time {" + nf.format(uploadTime) + "} msecs");
 			else
 				logger.println("Failed to load {" + uploadFile + "} to Dataset {" + datasetAlias + "}");
+			if(statusMessage!=null && !statusMessage.isEmpty())
+				logger.println("Status Message: {" + statusMessage + "}");
 			logger.println("*******************************************************************************\n");
 
 			logger.println("\n*******************************************************************************");
@@ -690,8 +698,10 @@ public class DatasetLoader {
 			{
 				long rowCount = 0L;
 				
-				if (session.isDone()) {
-					throw new DatasetLoaderException("operation terminated on user request");
+				if (session != null) {
+					if (session.isDone()) {
+						throw new DatasetLoaderException("operation terminated on user request");
+					}
 				}
 
 				InputStream is = null;

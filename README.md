@@ -53,7 +53,7 @@ Input Parameter
 
 ``--token``   : Workday Rest API Refresh Token
 
-``--endpoint``: The Workday Rest API Endpoint URL. Example: https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName}
+``--endpoint``: The Workday Rest API Endpoint URL. Example: https://wd2-impl-services1.workday.com/ccx/api/v2/{tenantName}
 
 ``--inputFile``: The input csv file or directory (or directory if action is loadall)
 
@@ -66,11 +66,11 @@ Input Parameter
 
 Example 1: Upload a csv to a dataset in append mode
 
-``java -jar workday-prism-analytics-data-loader-<version>.jar --action load --operation append --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile workers.csv --dataset test``
+``java -jar workday-prism-analytics-data-loader-<version>.jar --action load --operation append --endpoint https://wd2-impl-services1.workday.com/ccx/api/v2/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile workers.csv --dataset test``
 
 Example 2: Upload all files in a folder to Prism
 
-``java -jar workday-prism-analytics-data-loader-<version>.jar --action loadAll --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile dataDirectory``
+``java -jar workday-prism-analytics-data-loader-<version>.jar --action loadAll --endpoint https://wd2-impl-services1.workday.com/ccx/api/v2/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile dataDirectory``
 
 Example 3: Generate the schema file from CSV
 

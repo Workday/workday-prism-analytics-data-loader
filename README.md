@@ -1,6 +1,6 @@
 # Workday Prism Analytics Data Loader
 
-Workday Prism Analytics Data Loader is a free to use sample client for the Workday Prism Analytics data API. This is a community Project and not offcially supported by Workday.
+Workday Prism Analytics Data Loader is a free to use sample client for the Workday Prism Analytics data API. This is a community Project and not officially supported by Workday.
 
 ## Downloading Workday Prism Analytics Data Loader
 
@@ -45,7 +45,7 @@ Or you can pass in all the param in the command line:
 
 Input Parameter
 
-``--action``  : load, loadAll, createSchema, detectEncoding. Use load for loading csv file or folder to a dataset, loadall for loading all files in a folder to individual datasets
+``--action``  : load, loadAll, createSchema, detectEncoding. Use load for loading csv file or folder to a dataset, loadall for loading all files in a folder to different datasets based on file name
 
 ``--u``       : Workday Rest API Client Id
 
@@ -55,7 +55,7 @@ Input Parameter
 
 ``--endpoint``: The Workday Rest API Endpoint URL. Example: https://wd2-impl-services1.workday.com/ccx/api/v2/{tenantName}
 
-``--inputFile``: The input csv file or directory (or directory if action is loadall)
+``--inputFile``: The input csv file or folder (or folder if action is loadall)
 
 ``--dataset`` : (Optional) the dataset name (required if action=load)
 
@@ -64,7 +64,7 @@ Input Parameter
 ``--operation`` : (Optional) the dataset update mode 'append' or 'replace'. Default is 'replace'
 
 
-Example 1: Upload a csv to a dataset in append mode
+Example 1: Upload a single file or entire folder to a dataset in append mode
 
 ``java -jar workday-prism-analytics-data-loader-<version>.jar --action load --operation append --endpoint https://wd2-impl-services1.workday.com/ccx/api/v2/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile workers.csv --dataset test``
 

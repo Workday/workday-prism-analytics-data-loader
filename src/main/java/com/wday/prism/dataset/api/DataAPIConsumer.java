@@ -28,7 +28,6 @@
 package com.wday.prism.dataset.api;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,6 +48,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOCase;
@@ -84,7 +87,9 @@ import com.wday.prism.dataset.api.types.GetDatasetsResponseType;
 import com.wday.prism.dataset.api.types.ListBucketsResponseType;
 import com.wday.prism.dataset.constants.Constants;
 import com.wday.prism.dataset.file.loader.DatasetLoaderException;
+import com.wday.prism.dataset.file.loader.FileUploadWorker;
 import com.wday.prism.dataset.file.schema.FileSchema;
+import com.wday.prism.dataset.monitor.Session;
 import com.wday.prism.dataset.util.FasterBufferedInputStream;
 import com.wday.prism.dataset.util.FileUtilsExt;
 import com.wday.prism.dataset.util.GZipInputStreamDeflater;
@@ -100,9 +105,15 @@ public class DataAPIConsumer {
 	public static final NumberFormat nf = NumberFormat.getIntegerInstance();
 	public static final NumberFormat nf2 = NumberFormat.getInstance();
 	private static final int bufferSize = 65536;
+	
+	private static final int MAX_THREAD_POOL = 200;
+	private static final ThreadPoolExecutor fileUploadExecutorPool = new ThreadPoolExecutor(Constants.MAX_CONCURRENT_FILE_LOADS,
+			Constants.MAX_CONCURRENT_FILE_LOADS, 10, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(MAX_THREAD_POOL),
+			Executors.defaultThreadFactory());
+
 
 	public static boolean uploadDirToBucket(String tenantURL, String apiVersion, String tenantName, String accessToken,
-			String bucketId, File bucketDir, PrintStream logger) throws URISyntaxException, ClientProtocolException,
+			String bucketId, File bucketDir, PrintStream logger,Session session) throws URISyntaxException, ClientProtocolException,
 			IOException, DatasetLoaderException, NoSuchAlgorithmException {
 
 		if (bucketDir == null) {
@@ -130,17 +141,81 @@ public class DataAPIConsumer {
 			throw new DatasetLoaderException("Number of files in folder  {" + bucketDir.getAbsolutePath()
 					+ "} is greater than max allowed {" + Constants.MAX_NUM_FILE_PARTS_IN_A_BUCKET + "}");
 		}
-
+		
 		for (File file : files) {
 			if (file.length() > Constants.MAX_COMPRESSED_FILE_PART_LENGTH) {
 				throw new DatasetLoaderException("files {" + file.getAbsolutePath()
 						+ "} size is greater than max allowed {" + Constants.MAX_COMPRESSED_FILE_PART_LENGTH + "}");
 			}
-			uploadStreamToBucket(tenantURL, apiVersion, tenantName, accessToken, bucketId, new FileInputStream(file),
-					file.getName(), logger);
 		}
-		return true;
+
+		LinkedHashMap<FileUploadWorker,String> fileUploadWorkers = new LinkedHashMap<FileUploadWorker,String>();
+
+
+		for (File file : files) {
+			try {
+				if (session != null && session.isDone()) {
+					throw new DatasetLoaderException("operation terminated on user request");
+				}
+
+				while (fileUploadExecutorPool.getQueue().size() >= MAX_THREAD_POOL) {
+					System.out.println("There are too many file upload jobs in the queue, will wait before trying again");
+					Thread.sleep(3000);
+					if (session != null && session.isDone()) {
+						throw new DatasetLoaderException("operation terminated on user request");
+					}
+				}
+				FileUploadWorker worker = new FileUploadWorker(tenantURL, apiVersion, tenantName, accessToken, bucketId, file, logger, session);
+
+				try {
+					fileUploadExecutorPool.execute(worker);
+					fileUploadWorkers.put(worker, file.getName());
+				} catch (Throwable t) {
+					System.out.println();
+					t.printStackTrace(System.out);
+				}
+
+			} catch (Throwable e) {
+				System.out.println();
+				e.printStackTrace(System.out);
+			} finally {
+			}
+		}
+
+		try {
+			return waitforAllWorkersToBeDone(fileUploadWorkers);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
+	
+	private static boolean waitforAllWorkersToBeDone(LinkedHashMap<FileUploadWorker,String> fileUploadWorkers)
+			throws InterruptedException {
+		boolean status = true;
+		boolean working = true;
+		while (working) {
+			working = false;
+			int sleepCount = 0;
+			for (FileUploadWorker work : fileUploadWorkers.keySet()) {
+				if (!work.isDone()) {
+					working = true;
+					if (sleepCount % 10 == 0)
+						System.out.println("Waiting for FileUploadWorker {" + fileUploadWorkers.get(work) + "} to finish");
+					Thread.sleep(3000);
+					sleepCount++;
+				} else {
+					if(!work.isUploadStatus())
+					{
+						status = work.isUploadStatus();
+					}
+					System.out.println("FileUploadWorker {" + fileUploadWorkers.get(work) + "} Finished. status: "+(work.isUploadStatus()));
+				}
+			}
+		}
+		return status;
+	}
+
 
 	public static boolean uploadStreamToBucket(String tenantURL, String apiVersion, String tenantName,
 			String accessToken, String bucketId, InputStream fileinputStream, String fileName, PrintStream logger)
@@ -198,9 +273,11 @@ public class DataAPIConsumer {
 			int statusCode = response.getStatusLine().getStatusCode();
 			if (statusCode != HttpStatus.SC_OK) {
 				if (responseString != null && !responseString.isEmpty()) {
+					System.err.println("FAILED Uploading file: " + fileName + ". Error: " + responseString);
 					throw new DatasetLoaderException(
 							"FAILED Uploading file: " + fileName + ". Error: " + responseString);
 				} else {
+					System.err.println("FAILED Uploading file: " + fileName + ". Error: " + response.getStatusLine().toString());
 					throw new DatasetLoaderException(
 							"FAILED Uploading file: " + fileName + ". Error: " + response.getStatusLine().toString());
 				}
@@ -215,6 +292,8 @@ public class DataAPIConsumer {
 						fileLength = ((Number) tmp).intValue();
 					}
 					if (fileLength != cis.getCount()) {
+						System.err.println("FAILED Uploading file: Bytes sent {" + cis.getByteCount()
+						+ "} does not match bytes received {" + fileLength + "}");
 						throw new DatasetLoaderException("FAILED Uploading file: Bytes sent {" + cis.getByteCount()
 								+ "} does not match bytes received {" + fileLength + "}");
 					} else {
@@ -258,7 +337,7 @@ public class DataAPIConsumer {
 			else
 				listEMURI = new URI(u.getScheme(), u.getUserInfo(), u.getHost(), u.getPort(),
 						"/ccx/api/prismAnalytics/" + apiVersion + "/" + tenantName + "/datasets",
-						"limit=100&offset=" + offset + "&search=" + search, null);
+						"name=" + search, null);
 
 			logger.println("Listing Datasets: " + listEMURI);
 
@@ -429,6 +508,13 @@ public class DataAPIConsumer {
 			schema.clearNumericParseFormat();
 			schema.getParseOptions().setFieldsDelimitedBy(",");
 			schema.getParseOptions().setHeaderLinesToIgnore(1);
+		}
+		
+		if(apiVersion.equalsIgnoreCase(Constants.API_VERSION_1))
+		{
+			schema.getParseOptions().setFieldsEnclosingCharacterEscapedBy(null);
+			schema.getParseOptions().setIgnoreLeadingWhitespaces(null);
+			schema.getParseOptions().setIgnoreTrailingWhitespaces(null);
 		}
 
 		CreateBucketRequestType createBucketRequestType = new CreateBucketRequestType();
@@ -606,8 +692,29 @@ public class DataAPIConsumer {
 		}
 	}
 
+	public static boolean completeBucketWithRetry(String tenantURL, String apiVersion, String tenantName,
+			String accessToken, String bucketId, PrintStream logger)
+			throws URISyntaxException, UnsupportedCharsetException, ClientProtocolException, IOException,
+			DatasetLoaderException, InterruptedException {
+		long maxWaitTime = 30 * 60 * 1000L;
+		long startTime = System.currentTimeMillis();
+		while (true) {
+			if (completeBucket(tenantURL, apiVersion, tenantName, accessToken, bucketId, logger)) {
+				return true;
+			} else {
+				if (System.currentTimeMillis() - startTime < maxWaitTime) {
+					Thread.sleep(5000);
+					continue;
+				} else {
+					break;
+				}
+			}
+		}
+		throw new DatasetLoaderException(
+				"Could not complete Bucket {" + bucketId + "}. Giving up after trying for {" + maxWaitTime + "} msecs");
+	}
 
-	public static boolean completeBucket(String tenantURL, String apiVersion, String tenantName, String accessToken,
+	private static boolean completeBucket(String tenantURL, String apiVersion, String tenantName, String accessToken,
 			String bucketId, PrintStream logger) throws URISyntaxException, UnsupportedCharsetException,
 			ClientProtocolException, IOException, DatasetLoaderException {
 
@@ -654,12 +761,17 @@ public class DataAPIConsumer {
 					return true;
 				throw new DatasetLoaderException("Could not complete Bucket: " + responseString);
 			}
-		} else {
-			logger.println("Response: " + response.getStatusLine().toString());
-			throw new DatasetLoaderException("Could not complete Bucket: " + response.getStatusLine().toString());
+		} else if (statusCode == HttpStatus.SC_BAD_REQUEST) {
+			if (responseString != null && !responseString.isEmpty()) {
+				logger.println("Complete Bucket Response: " + responseString);
+				if(responseString.contains("different wBucket is in the Processing stage"))
+				{
+					return false;
+				}
+			}
 		}
-
-		return true;
+		logger.println("Response: " + response.getStatusLine().toString());
+		throw new DatasetLoaderException("Could not complete Bucket: " + response.getStatusLine().toString());
 	}
 
 	public static List<GetBucketResponseType> listBuckets(String tenantURL, String apiVersion, String tenantName,
@@ -811,6 +923,11 @@ public class DataAPIConsumer {
 		}
 		logger.println("File Upload URI: " + uploadURI);
 		return uploadURI;
+	}
+	
+	public static void shutdown()
+	{
+		fileUploadExecutorPool.shutdownNow();
 	}
 
 }

@@ -136,7 +136,8 @@ public class PrismDataLoaderMain {
 					params.debug = true;
 					Constants.debug = true;
 				} else if (args[i - 1].equalsIgnoreCase("--parseContent")) {
-					params.parseContent = true;
+					if(args[i]!=null && args[i].equalsIgnoreCase("TRUE"))
+						params.parseContent = true;
 				} else if (args[i - 1].equalsIgnoreCase("--inputFile")) {
 					String tmp = args[i];
 					if (tmp != null) {
@@ -220,35 +221,35 @@ public class PrismDataLoaderMain {
 	public static void printUsage() {
 		System.out.println("\n*******************************************************************************");
 		System.out.println(
-				"Usage: java -jar workday-prism-analytics-data-loader.jar --action load --endpoint WokdayRestAPIEndpoint --u clientId --p clientSecret --dataset datasetName --inputFile inputFile");
+				"Usage: java -jar workday-prism-analytics-data-loader-<version>.jar --action load --endpoint WokdayRestAPIEndpoint --u clientId --p clientSecret --dataset datasetName --inputFile inputFile");
 		System.out.println("");
 		System.out.println(
-				"--action  : load, loadAll, createSchema, detectEncoding. Use load for loading csv, loadall for loading all files in a folder");
+				"--action  : load, loadAll, createSchema, detectEncoding. Use load for loading file/directory, loadall for loading all files in a folder to different datasets based on file name");
 		System.out.println("--u       : Workday Rest API Client Id");
 		System.out.println("--p       : Workday Rest API Client Secret");
 		System.out.println("--token   : Workday Rest API Refresh Token");
 		System.out.println(
 				"--endpoint: The Workday Rest API Endpoint URL. Example: https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName}");
-		System.out.println("--inputFile : The input csv file (or directory if action is loadall)");
+		System.out.println("--inputFile : The input csv file or directory");
 		System.out.println("--dataset : (Optional) the dataset name (required if action=load)");
 		System.out.println("--fileEncoding : (Optional) the encoding of the inputFile default UTF-8");
 		System.out.println("*******************************************************************************\n");
 		System.out.println("");
-		System.out.println("Example 1: Upload a csv to a dataset");
+		System.out.println("Example 1: Upload a file/directory to a dataset");
 		System.out.println(
-				"java -jar workday-prism-analytics-data-loader-<tablePrefix>.jar --action load --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile Worker.csv --dataset test");
+				"java -jar workday-prism-analytics-data-loader-<version>.jar --action load --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile Worker.csv --dataset test");
 		System.out.println("");
 		System.out.println("Example 2: Upload all files in a folder to prism");
 		System.out.println(
-				"java -jar workday-prism-analytics-data-loader-<tablePrefix>.jar --action loadAll --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile dataDirectory");
+				"java -jar workday-prism-analytics-data-loader-<version>.jar --action loadAll --endpoint https://wd2-impl-services1.workday.com/ccx/api/v1/{tenantName} --u 12345#! --p @#@#@# --token A1B2C3A1B2C3A1B2C3A1B2C3 --inputFile dataDirectory --tablePrefix Table_");
 		System.out.println("");
 		System.out.println("Example 3: Generate the schema file from CSV");
 		System.out.println(
-				"java -jar workday-prism-analytics-data-loader-<tablePrefix>.jar --action createSchema --inputFile Worker.csv");
+				"java -jar workday-prism-analytics-data-loader-<version>.jar --action createSchema --inputFile Worker.csv");
 		System.out.println("");
 		System.out.println("Example 4: detect file encoding");
 		System.out.println(
-				"java -jar workday-prism-analytics-data-loader-<tablePrefix>.jar --action detectEncoding --inputFile Worker.csv");
+				"java -jar workday-prism-analytics-data-loader-<version>.jar --action detectEncoding --inputFile Worker.csv");
 		System.out.println("");
 	}
 
@@ -410,6 +411,9 @@ public class PrismDataLoaderMain {
 					return status;
 				} catch (DatasetLoaderException e) {
 					return false;
+				}finally
+				{
+					DataAPIConsumer.shutdown();
 				}
 			} catch (Exception e) {
 				System.out.println();
@@ -447,6 +451,9 @@ public class PrismDataLoaderMain {
 					e.printStackTrace(System.out);
 					session.fail(e.getMessage());
 					return false;
+				}finally
+				{
+					DataAPIConsumer.shutdown();
 				}
 			} catch (Exception e) {
 				System.out.println();

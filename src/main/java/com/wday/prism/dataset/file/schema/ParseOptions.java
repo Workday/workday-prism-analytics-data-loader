@@ -35,7 +35,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class ParseOptions {
 
 	private String fieldsDelimitedBy = ",";
-	private char fieldsEnclosedBy = '"';
+	private String recordsDelimitedBy = null;
+	private Character fieldsEnclosedBy = '"';
+	private Character fieldsEnclosingCharacterEscapedBy = '"';
+	private Boolean ignoreLeadingWhitespaces = true;
+	private Boolean ignoreTrailingWhitespaces = true;
 
 	private int headerLinesToIgnore = 1; // BY DEFAULT THERE IS A HEADER LINE IN CSV
 	private Map<String, String> charset = new LinkedHashMap<String, String>();
@@ -159,6 +163,38 @@ public class ParseOptions {
 			return false;
 		}
 		return true;
+	}
+
+	public Character getFieldsEnclosingCharacterEscapedBy() {
+		return fieldsEnclosingCharacterEscapedBy;
+	}
+
+	public void setFieldsEnclosingCharacterEscapedBy(Character fieldsEnclosingCharacterEscapedBy) {
+		this.fieldsEnclosingCharacterEscapedBy = fieldsEnclosingCharacterEscapedBy;
+	}
+
+	public Boolean isIgnoreLeadingWhitespaces() {
+		return ignoreLeadingWhitespaces;
+	}
+
+	public void setIgnoreLeadingWhitespaces(Boolean ignoreLeadingWhitespaces) {
+		this.ignoreLeadingWhitespaces = ignoreLeadingWhitespaces;
+	}
+
+	public Boolean isIgnoreTrailingWhitespaces() {
+		return ignoreTrailingWhitespaces;
+	}
+
+	public void setIgnoreTrailingWhitespaces(Boolean ignoreTrailingWhitespaces) {
+		this.ignoreTrailingWhitespaces = ignoreTrailingWhitespaces;
+	}
+
+	public String getRecordsDelimitedBy() {
+		return recordsDelimitedBy;
+	}
+
+	public void setRecordsDelimitedBy(String recordsDelimitedBy) {
+		this.recordsDelimitedBy = recordsDelimitedBy;
 	}
 
 }

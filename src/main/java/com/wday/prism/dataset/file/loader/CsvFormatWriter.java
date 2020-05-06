@@ -86,7 +86,8 @@ public class CsvFormatWriter {
 	private int headerLinesToIgnore;
 	boolean parseContent;
 
-	public CsvFormatWriter(File outputDir, String uploadFilePrefix, List<FieldType> dataTypes, PrintStream logger,int headerLinesToIgnore, boolean parseContent) {
+	public CsvFormatWriter(File outputDir, String uploadFilePrefix, List<FieldType> dataTypes, PrintStream logger,
+			int headerLinesToIgnore, boolean parseContent) {
 		this.outputDir = outputDir;
 		this.uploadFilePrefix = uploadFilePrefix;
 		this._dataTypes = dataTypes;
@@ -101,7 +102,7 @@ public class CsvFormatWriter {
 		LinkedHashMap<String, Object> curr = new LinkedHashMap<String, Object>();
 
 		totalRowCount.incrementAndGet();
-		
+
 		if (totalRowCount.get() % interval == 0 || totalRowCount.get() == 1) {
 			long newStartTime = System.currentTimeMillis();
 			if (startTime == 0)
@@ -115,20 +116,18 @@ public class CsvFormatWriter {
 			interval = interval * 10;
 		}
 
-		if(!parseContent)
-		{
+		if (!parseContent) {
 			initWriter();
 			writer.writeRecord(values);
 			successRowCount.incrementAndGet();
 			return;
 		}
-		
+
 		if (values.size() != this.numColumns) {
 			String message = "Row " + totalRowCount + " contains an invalid number of Values, expected "
 					+ this.numColumns + " Value(s), got " + values.size() + ".";
 			throw new ParseException(message, 0);
 		}
-
 
 		for (int key_value_count = 0; key_value_count < this.numColumns; key_value_count++) {
 
@@ -144,7 +143,9 @@ public class CsvFormatWriter {
 
 			if (fieldType.getType() == FieldTypeEnum.NUMERIC) {
 				try {
-					if (columnValue == null || columnValue.toString().trim().isEmpty() || columnValue.toString().trim().equalsIgnoreCase("null") || columnValue.toString().trim().equalsIgnoreCase("n/a")) {
+					if (columnValue == null || columnValue.toString().trim().isEmpty()
+							|| columnValue.toString().trim().equalsIgnoreCase("null")
+							|| columnValue.toString().trim().equalsIgnoreCase("n/a")) {
 						dim_values.add(null);
 					} else if (columnValue != null) {
 						BigDecimal v = null;
@@ -172,7 +173,9 @@ public class CsvFormatWriter {
 			} else if (fieldType.getType() == FieldTypeEnum.DATE) {
 				try {
 					SimpleDateFormat sdt = fieldType.getCompiledDateFormat();
-					if (columnValue == null || columnValue.toString().trim().isEmpty() || columnValue.toString().trim().equalsIgnoreCase("null") || columnValue.toString().trim().equalsIgnoreCase("n/a")) {
+					if (columnValue == null || columnValue.toString().trim().isEmpty()
+							|| columnValue.toString().trim().equalsIgnoreCase("null")
+							|| columnValue.toString().trim().equalsIgnoreCase("n/a")) {
 						dim_values.add(null);
 						curr.put(fieldType.getName(), null);
 					} else {
@@ -192,7 +195,9 @@ public class CsvFormatWriter {
 				}
 			} else if (fieldType.getType() == FieldTypeEnum.BOOLEAN) {
 				try {
-					if (columnValue == null || columnValue.toString().trim().isEmpty() || columnValue.toString().trim().equalsIgnoreCase("null") || columnValue.toString().trim().equalsIgnoreCase("n/a")) {
+					if (columnValue == null || columnValue.toString().trim().isEmpty()
+							|| columnValue.toString().trim().equalsIgnoreCase("null")
+							|| columnValue.toString().trim().equalsIgnoreCase("n/a")) {
 						dim_values.add(null);
 						curr.put(fieldType.getName(), null);
 					} else {
@@ -296,20 +301,16 @@ public class CsvFormatWriter {
 		}
 
 		if (writer == null) {
-			if (filePart == 0)
-			{
+			if (filePart == 0) {
 				this.ouputFile = new File(outputDir, uploadFilePrefix + ".csv.gz");
-			}else {
-				this.ouputFile = new File(outputDir, uploadFilePrefix + "." + filePart + "."  + ".csv.gz");
+			} else {
+				this.ouputFile = new File(outputDir, uploadFilePrefix + "." + filePart + ".csv.gz");
 			}
 			writer = new CSVWriter(new BufferedWriter(
 					new OutputStreamWriter(new GzipCompressorOutputStream(new FileOutputStream(this.ouputFile)),
 							StringUtilsExt.utf8Charset),
 					Constants.DEFAULT_BUFFER_SIZE), ',', '"');
-			//for(int cnt=0;cnt<headerLinesToIgnore;cnt++)
-			{
-				writer.writeRecord(this.getHeader());
-			}
+			writer.writeRecord(this.getHeader());
 		}
 
 	}

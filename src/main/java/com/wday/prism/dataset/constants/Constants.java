@@ -37,6 +37,8 @@ public class Constants {
 
 	public static final int MAX_CONCURRENT_LOADS = 2;
 
+	public static final int MAX_CONCURRENT_FILE_LOADS = 3;
+
 	public static final int MAX_NUM_FILE_PARTS_IN_A_BUCKET = 100;
 
 	public static final long COMPRESSED_FILE_PART_LENGTH = 128 * FileUtils.ONE_MB; // 128MB

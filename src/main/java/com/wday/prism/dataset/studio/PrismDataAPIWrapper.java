@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
@@ -112,9 +113,9 @@ public class PrismDataAPIWrapper {
 
 	public static boolean completeLoad(String workdayRESTAPIEndpoint, String accessToken, String bucketId,
 			boolean waitForComplete)
-			throws DatasetLoaderException, ClientProtocolException, IOException, URISyntaxException {
+			throws DatasetLoaderException, ClientProtocolException, IOException, URISyntaxException, UnsupportedCharsetException, InterruptedException {
 		APIEndpoint endpoint = APIEndpoint.getAPIEndpoint(workdayRESTAPIEndpoint);
-		boolean status = DataAPIConsumer.completeBucket(endpoint.tenantURL, endpoint.apiVersion, endpoint.tenant,
+		boolean status = DataAPIConsumer.completeBucketWithRetry(endpoint.tenantURL, endpoint.apiVersion, endpoint.tenant,
 				accessToken, bucketId, System.out);
 		if (!waitForComplete)
 			return status;

@@ -265,6 +265,30 @@ public class FileSchema {
 		}
 	}
 
+	public static FileSchema load(File schemaFile, Charset fileCharset, PrintStream logger)
+			throws JsonParseException, JsonMappingException, IOException {
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+		if (fileCharset == null)
+			fileCharset = Charset.forName("UTF-8");
+
+		FileSchema userSchema = null;
+		if (schemaFile != null && schemaFile.exists()) {
+			logger.println("Loading existing schema from file {" + schemaFile + "}");
+			InputStreamReader reader = new InputStreamReader(new BOMInputStream(new FileInputStream(schemaFile), false),
+					StringUtilsExt.utf8Decoder(null, Charset.forName("UTF-8")));
+			userSchema = mapper.readValue(reader, FileSchema.class);
+		}
+
+		if (userSchema == null)
+			return null;
+
+		validateSchema(userSchema, logger);
+
+		return userSchema;
+	}
+
 	public static FileSchema load(File inputCSV, File schemaFile, Charset fileCharset, PrintStream logger)
 			throws JsonParseException, JsonMappingException, IOException {
 
@@ -696,10 +720,10 @@ public class FileSchema {
 			boolean allowCustomFieldExtension) {
 		String outString = inString;
 		String suffix = null;
-		int maxLength = 80;
+		int maxLength = 120;
 		if (defaultName != null) {
 			if (defaultName.equalsIgnoreCase("object") || defaultName.equalsIgnoreCase("column")) {
-				maxLength = 40;
+				maxLength = 120;
 			}
 		}
 		try {

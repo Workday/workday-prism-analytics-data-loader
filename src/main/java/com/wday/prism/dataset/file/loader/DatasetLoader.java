@@ -139,8 +139,7 @@ public class DatasetLoader {
 			throw new DatasetLoaderException("File {" + uploadFile.getAbsolutePath() + "} not found");
 		}
 
-		
-		File uploadBaseDir = uploadFile.getParentFile();
+		File uploadBaseDir = uploadFile.getAbsoluteFile().getParentFile();
 		String uploadFilePrefix =  FileUtilsExt.getBaseName(uploadFile);
 		archiveDir = new File(uploadBaseDir, "archive");
 		
@@ -418,11 +417,11 @@ public class DatasetLoader {
 			}
 
 			long startTime = System.currentTimeMillis();
-			DataAPIConsumer.uploadDirToBucket(tenantURL, apiVersion, tenantName, accessToken, hdrId, bucketDir, logger);
+			DataAPIConsumer.uploadDirToBucket(tenantURL, apiVersion, tenantName, accessToken, hdrId, bucketDir, logger, session);
 			long endTime = System.currentTimeMillis();
 			uploadTime = endTime - startTime;
 
-			status = DataAPIConsumer.completeBucket(tenantURL, apiVersion, tenantName, accessToken, hdrId, logger);
+			status = DataAPIConsumer.completeBucketWithRetry(tenantURL, apiVersion, tenantName, accessToken, hdrId, logger);
 			statusMessage = null;
 			startTime = System.currentTimeMillis();
 			while (status) {
@@ -430,13 +429,17 @@ public class DatasetLoader {
 						accessToken, hdrId, logger);
 				if (serverStatus != null) {
 					session.setParam(Constants.serverStatusParam, serverStatus.getBucketState().toUpperCase());
-					// Bucket state can be: New, Processing, Loading, Success, Failed
+					// Bucket state can be: New, Processing, Loading,Warning, Success, Failed
 					if (serverStatus.getBucketState().equalsIgnoreCase("Success")) {
 						statusMessage = serverStatus.getErrorMessage();
 						break;
 					} else if (serverStatus.getBucketState().equalsIgnoreCase("Warning")) {
 						statusMessage = serverStatus.getErrorMessage();
 						break;
+					} else if (serverStatus.getBucketState().equalsIgnoreCase("Queued")) {
+						Thread.sleep(5000);
+						startTime = System.currentTimeMillis();
+						continue;
 					} else if (serverStatus.getBucketState().equalsIgnoreCase("Processing")) {
 						if (System.currentTimeMillis() - startTime > maxWaitTime) {
 							status = false;
@@ -445,7 +448,7 @@ public class DatasetLoader {
 						}
 						Thread.sleep(5000);
 						continue;
-					} else // status can be (New, Loading, Failed) all are invalid states at this point
+					} else // status can be (New, Queued, Processing, Success, Failed) all other status are invalid states at this point
 					{
 						status = false;
 						if (serverStatus.getErrorMessage() != null)
@@ -584,7 +587,7 @@ public class DatasetLoader {
 								if (field.getScale() != other.getScale()) {
 									logger.println("Field: '" + field.getName() + "' scale '" + field.getScale()
 											+ "'does not match table scale'" + other.getScale() + "'");
-									field.setPrecision(other.getPrecision());
+									field.setScale(other.getScale());
 								}
 
 								field.setParseFormat(null);

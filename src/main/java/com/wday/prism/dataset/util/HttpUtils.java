@@ -36,7 +36,9 @@ import java.util.Map;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
@@ -44,11 +46,17 @@ import org.apache.http.params.HttpParams;
 public class HttpUtils {
 
 	public static HttpClient getHttpClient() throws UnknownHostException {
+		
+		/*
 		HttpParams params = new BasicHttpParams();
 		HttpConnectionParams.setConnectionTimeout(params, 60000);
 		HttpConnectionParams.setSoTimeout(params, 60000);
 
 		HttpClient httpClient = new DefaultHttpClient(params);
+		*/
+		
+		HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+		CloseableHttpClient httpClient = httpClientBuilder.build();
 		return httpClient;
 	}
 

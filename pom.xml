@@ -6,7 +6,7 @@
 	<description>Workday Prism Analytics Data Loader</description>
 	<artifactId>workday-prism-analytics-data-loader</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0.3</version>
+	<version>1.0.4-SNAPSHOT</version>
 	<url>https://github.com/Workday/workday-prism-analytics-data-loader</url>
 	<organization>
 		<name>Workday</name>
@@ -37,7 +37,7 @@
 		<connection>scm:git:git@github.com:Workday/workday-prism-analytics-data-loader.git</connection>
 		<developerConnection>scm:git:git@github.com:Workday/workday-prism-analytics-data-loader.git</developerConnection>
 		<url>scm:git:git@github.com:Workday/workday-prism-analytics-data-loader.git</url>
-		<tag>workday-prism-analytics-data-loader-1.0.3</tag>
+		<tag>HEAD</tag>
 	</scm>
 	<dependencies>
 			<dependency>

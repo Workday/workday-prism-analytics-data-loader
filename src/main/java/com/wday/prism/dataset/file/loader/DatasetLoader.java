@@ -27,10 +27,13 @@
  */
 package com.wday.prism.dataset.file.loader;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -47,6 +50,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOCase;
@@ -64,8 +69,10 @@ import com.wday.prism.dataset.file.schema.FileSchema;
 import com.wday.prism.dataset.monitor.Session;
 import com.wday.prism.dataset.monitor.ThreadContext;
 import com.wday.prism.dataset.util.CSVReader;
+import com.wday.prism.dataset.util.CSVWriter;
 import com.wday.prism.dataset.util.CharsetChecker;
 import com.wday.prism.dataset.util.FileUtilsExt;
+import com.wday.prism.dataset.util.StringUtilsExt;
 
 /**
  * The Class DatasetLoader.
@@ -409,8 +416,55 @@ public class DatasetLoader {
 			} catch (Throwable t) {
 				t.printStackTrace();
 			}
+			
+			boolean parseFile = true;
+			if (!parseContent && !uploadFile.isDirectory()) {
+				InputStream is = null;
+				GzipCompressorOutputStream gzos = null;
+				File ouputFile = null;
+				long totalInputFileSize = uploadFile.length();
+				long startTime = System.currentTimeMillis();
 
-			readInputFile(inputFiles,uploadBaseDir,uploadFilePrefix, bucketDir, hdrId, schema, logger, inputFileCharset, session, q, parseContent);
+				try {
+
+					if (FileUtilsExt.isGzipFile(uploadFile)) {
+						is = new GZIPInputStream(new FileInputStream(uploadFile), Constants.DEFAULT_BUFFER_SIZE);
+					} else {
+						is = new FileInputStream(uploadFile);
+					}
+
+					ouputFile = new File(bucketDir, uploadFilePrefix + ".csv.gz");
+					gzos = new GzipCompressorOutputStream(new FileOutputStream(ouputFile));
+					IOUtils.copy(is, gzos);
+					
+				} catch (IOException ex) {
+					ex.printStackTrace(logger);
+				} finally {
+					IOUtils.closeQuietly(is);
+					IOUtils.closeQuietly(gzos);
+				}
+				
+				if(ouputFile!=null && ouputFile.length()<Constants.MAX_COMPRESSED_FILE_PART_LENGTH)
+				{
+					parseFile = false;
+					long totalOutputFileSize = ouputFile.length();
+					long endTime = System.currentTimeMillis();
+					long digestTime = endTime - startTime;
+
+					logger.println("\n*******************************************************************************");
+					logger.println("Succesfully created output file: " + ouputFile + "\n, % Compression: "
+							+ (totalInputFileSize / totalOutputFileSize) * 100 + "%" + ", Digest Time {"
+							+ nf.format(digestTime) + "} msecs");
+					logger.println("*******************************************************************************\n");
+
+				}
+
+			}
+			
+			if(parseFile)
+			{
+				readInputFile(inputFiles,uploadBaseDir,uploadFilePrefix, bucketDir, hdrId, schema, logger, inputFileCharset, session, q, parseContent);
+			}
 
 			if (session.isDone()) {
 				throw new DatasetLoaderException("operation terminated on user request");

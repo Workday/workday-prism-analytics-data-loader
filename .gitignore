@@ -11,7 +11,4 @@ release.properties
 ## Mac directory files
 .DS_Store
 Thumbs.db
-src/test/java/com/wday/prism/dataset/studio/LoadFolder.java
-src/test/java/com/wday/prism/dataset/studio/LoadFolder.java
-src/test/java/com/wday/prism/dataset/studio/testUTF8Characters.java
-src/test/java/com/wday/prism/dataset/studio/LoadFolder.java
+src/test/java/com/wday/prism/dataset/studio/
